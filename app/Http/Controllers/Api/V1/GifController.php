@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\DTO\{FavoriteGifDTO, GifFilterDTO};
 use App\Contracts\Services\GifServiceInterface;
+use App\Exceptions\DuplicateFavoriteGifException;
 use App\Exceptions\GiphyClientException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\{GifFilterRequest, SaveFavoriteGifRequest};
 use App\Http\Resources\{GifResource, PaginationResource};
+use Exception;
 
 class GifController extends Controller
 {
@@ -41,11 +43,17 @@ class GifController extends Controller
      */
     public function store(SaveFavoriteGifRequest $request)
     {
-        $favoriteGif = FavoriteGifDTO::fromRequest($request);
-        $this->authorize('save', $favoriteGif);
+        try {
+            $favoriteGif = FavoriteGifDTO::fromRequest($request);
+            $this->authorize('save', $favoriteGif);
 
-        $this->gifService->saveFavoriteGif($favoriteGif);
-        return response()->json(['message' => 'GIF saved successfully.'], 201);
+            $this->gifService->saveFavoriteGif($favoriteGif);
+            return response()->json(['message' => 'GIF saved successfully.'], 201);
+        } catch(DuplicateFavoriteGifException $de) {
+            return response()->json(['message' => $de->getMessage()], 409);
+        } catch(Exception $e) {
+            return response()->json(['message' => 'Unexpected error.'], 500);
+        }
     }
 
     /**
