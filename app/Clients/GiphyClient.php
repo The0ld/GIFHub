@@ -5,6 +5,7 @@ namespace App\Clients;
 use App\Contracts\Clients\GifClientInterface;
 use App\DTO\{GifClientDTO, GifFilterDTO, GifListDTO};
 use App\Exceptions\GiphyClientException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class GiphyClient implements GifClientInterface
@@ -20,29 +21,39 @@ class GiphyClient implements GifClientInterface
 
     public function filterGifs(GifFilterDTO $filter): GifListDTO
     {
-        $response = Http::get("{$this->url}/search", [
-            'q' => $filter->q,
-            'limit' => $filter->limit,
-            'offset' => $filter->offset,
-            'api_key' => $this->key,
-        ]);
+        // Cache key based on filter query and pagination
+        $cacheKey = "gifs_search:{$filter->q}:limit_{$filter->limit}:offset_{$filter->offset}";
 
-        $this->handleErrorResponse($response);
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($filter) {
+            $response = Http::get("{$this->url}/search", [
+                'q' => $filter->q,
+                'limit' => $filter->limit,
+                'offset' => $filter->offset,
+                'api_key' => $this->key,
+            ]);
 
-        return GifListDTO::fromJsonObject(json_decode($response->body()));
+            $this->handleErrorResponse($response);
+
+            return GifListDTO::fromJsonObject(json_decode($response->body()));
+        });
     }
 
     public function getGifById(string $gifId): GifClientDTO
     {
-        $response = Http::get("{$this->url}/{$gifId}", [
-            'api_key' => $this->key,
-        ]);
+        // Cache key based on the GIF ID
+        $cacheKey = "gif_show:{$gifId}";
 
-        $this->handleErrorResponse($response);
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($gifId) {
+            $response = Http::get("{$this->url}/{$gifId}", [
+                'api_key' => $this->key,
+            ]);
 
-        $responseData = json_decode($response->body());
+            $this->handleErrorResponse($response);
 
-        return GifClientDTO::fromJsonObject($responseData->data);
+            $responseData = json_decode($response->body());
+
+            return GifClientDTO::fromJsonObject($responseData->data);
+        });
     }
 
     private function handleErrorResponse($response): void
