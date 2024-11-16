@@ -9,6 +9,7 @@ use App\Exceptions\GiphyClientException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\{GifFilterRequest, SaveFavoriteGifRequest};
 use App\Http\Resources\{GifResource, PaginationResource};
+use App\Helpers\ApiResponse;
 use Exception;
 
 class GifController extends Controller
@@ -29,12 +30,14 @@ class GifController extends Controller
             $gifFilter = GifFilterDTO::fromRequest($request);
 
             $gifList = $this->gifService->filterGifs($gifFilter);
-            return response()->json([
-                'data' => GifResource::collection($gifList->gifs),
-                'pagination' => new PaginationResource($gifList->pagination),
-            ], 200);
+
+            return ApiResponse::success(
+                data: GifResource::collection($gifList->gifs),
+                statusCode: 200,
+                pagination: new PaginationResource($gifList->pagination)
+            );
         } catch (GiphyClientException $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+            return ApiResponse::error($e->getMessage(), $e->getStatusCode());
         }
     }
 
@@ -48,11 +51,15 @@ class GifController extends Controller
             $this->authorize('save', $favoriteGif);
 
             $this->gifService->saveFavoriteGif($favoriteGif);
-            return response()->json(['message' => 'GIF saved successfully.'], 201);
+
+            return ApiResponse::success(
+                message: 'GIF saved successfully.',
+                statusCode: 201,
+            );
         } catch(DuplicateFavoriteGifException $de) {
-            return response()->json(['message' => $de->getMessage()], 409);
+            return ApiResponse::error($de->getMessage(), 409);
         } catch(Exception $e) {
-            return response()->json(['message' => 'Unexpected error.'], 500);
+            return ApiResponse::error('Unexpected error.', 500);
         }
     }
 
@@ -63,9 +70,13 @@ class GifController extends Controller
     {
         try {
             $gif = $this->gifService->getGifById($id);
-            return new GifResource($gif);
+
+            return ApiResponse::success(
+                data: new GifResource($gif),
+                statusCode: 200,
+            );
         } catch (GiphyClientException $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+            return ApiResponse::error($e->getMessage(), $e->getStatusCode());
         }
     }
 }
