@@ -157,6 +157,43 @@ class SaveFavoriteGifFeatureTest extends TestCase
     }
 
     /**
+     * Saving favorite GIF fails when trying to save a duplicate GIF for the same user.
+     */
+    public function test_save_favorite_gif_fails_with_duplicate_entry(): void
+    {
+        $payload = [
+            'gif_id' => 'YsTs5ltWtEhnq',
+            'alias' => 'alias_gif',
+            'user_id' => $this->user->id,
+        ];
+
+        // Save GIF at first time.
+        $this->actingAs($this->user)
+             ->postJson('/api/v1/gifs', $payload)
+             ->assertStatus(201);
+
+        // Try save GIF again.
+        $response = $this->actingAs($this->user)
+                         ->postJson('/api/v1/gifs', $payload);
+
+        // Assert: Verify that the response returns a 409 error with the correct error message.
+        $response->assertStatus(409)
+                 ->assertJson([
+                     'message' => 'There is already a favorite GIF with this ID for this user.'
+                 ]);
+
+        $log = ServiceLog::latest()->first();
+
+        $this->assertEquals($this->user->id, $log->user_id);
+        $this->assertEquals('api/v1/gifs', $log->service);
+        $this->assertEquals($payload, $log->request_body);
+        $this->assertEquals(409, $log->response_status);
+        $this->assertIsArray($log->response_body);
+        $this->assertEquals('127.0.0.1', $log->ip_address);
+        $this->assertStringEndsWith('ms', $log->duration);
+    }
+
+    /**
      * Tear down the test environment for each test method.
      */
     protected function tearDown(): void
