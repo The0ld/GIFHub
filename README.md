@@ -103,21 +103,24 @@ flowchart LR
     GetGIFDetails -->|Logs GIF detail requests| LogInteractions
     GetGIFDetails -->|Handles 404 Not Found| NotFound["GIF Not Found"]
     GetGIFDetails -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
+    GetGIFDetails -->|Handles 422 Validation Error| ValidationError
 
     User -->|Marks a GIF as a favorite| SaveGIF["Save GIF as favorite"]
     SaveGIF -->|Logs favorite save actions| LogInteractions
     SaveGIF -->|Handles 422 Validation Error| ValidationError
     SaveGIF -->|Handles 403 Unauthorized Error| UnauthorizedError["Unauthorized Action"]
     SaveGIF -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
+    SaveGIF -->|Handles 409 Duplicate Entry| DuplicateEntryError["Duplicate Entry Error"]
 
     subgraph System["System"]
         LogInteractions["Log service interactions"]
     end
 
     ValidationError --> LogInteractions
-    NotFound --> LogInteractions
-    UnauthorizedError --> LogInteractions
+    NotFoundError --> LogInteractions
     UnauthenticatedError --> LogInteractions
+    UnauthorizedError --> LogInteractions
+    DuplicateEntryError --> LogInteractions
 ```
 
 ### Usage
@@ -157,22 +160,28 @@ sequenceDiagram
     API->>Middleware: Passes request
     Middleware->>Controller: Calls AuthController@login
     Controller->>Request: Validates LoginRequest
-    Request->>Controller: Returns validated request
-    Controller->>DTO: Converts request to CredentialsDTO
-    DTO->>Controller: Returns DTO
-    Controller->>ServiceInterface: Calls AuthServiceInterface@login with DTO
-    ServiceInterface->>Service: Resolved to AuthService (via DI container)
-    Service->>RepositoryInterface: Calls AuthRepositoryInterface@authenticate with DTO
-    RepositoryInterface->>Repository: Resolved to AuthRepository (via DI container)
-    Repository->>DB: Queries user by email
-    DB->>Repository: Returns user record
-    Repository->>Service: Verifies credentials and returns User
-    Service->>Controller: Returns token result
-    Controller->>Resource: Wraps token result into LoginResource
-    Resource->>Controller: Returns formatted JSON response
-    Controller->>Middleware: Response ready
-    Middleware->>DB: Logs service interaction
-    Middleware->>User: Returns JSON response with access token
+    alt Validation Fails
+        Request-->>Controller: ValidationException (422)
+        Controller->>Middleware: Prepares Error Response
+        Middleware->>DB: Logs service interaction
+        Middleware->>User: Returns 422 Validation Error
+    else Validation Succeeds
+        Request->>Controller: Returns validated request
+        Controller->>DTO: Converts request to CredentialsDTO
+        DTO->>Controller: Returns DTO
+        Controller->>ServiceInterface: Calls AuthServiceInterface@login with DTO
+        ServiceInterface->>Service: Resolved to AuthService (via DI container)
+        Service->>RepositoryInterface: Calls AuthRepositoryInterface@authenticate with DTO
+        RepositoryInterface->>Repository: Resolved to AuthRepository (via DI container)
+        Repository->>DB: Queries user by email
+        DB->>Repository: Returns user record
+        Repository->>Service: Verifies credentials and returns User
+        Service->>Controller: Returns token result
+        Controller->>Resource: Wraps token result into LoginResource
+        Resource->>Controller: Returns formatted JSON response
+        Controller->>Middleware: Response ready
+        Middleware->>DB: Logs service interaction
+        Middleware->>User: Returns JSON response with access token
 ```
 
 #### **2. Search for GIFs**
