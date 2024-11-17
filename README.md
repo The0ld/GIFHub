@@ -64,7 +64,10 @@ This diagram demonstrates:
 
 ### Notes on Database Design
 
-- **Unique Constraint on Favorite GIFs**: The `favorite_gifs` table enforces a **unique constraint** on the combination of `user_id` and `gif_id`. This ensures that a user cannot save the same GIF more than once, maintaining data consistency.
+- **Unique Constraint on Favorite GIFs**: The `favorite_gifs` table enforces a
+    **unique constraint** on the combination of `user_id` and `gif_id`.
+    This ensures that a user cannot save the same GIF more than once,
+    maintaining data consistency.
 
 ---
 
@@ -262,15 +265,44 @@ sequenceDiagram
     Resource->>Controller: Returns formatted JSON response
     Controller->>LogMiddleware: Response ready
     LogMiddleware->>DB: Logs service interaction
-    LogMiddleware->>User: Returns JSON response with GIF list data and pagination
+    LogMiddleware->>User: Returns JSON response with GIF data
 ```
 
-#### **4. Search for GIFs**
+#### **4. Save Favorite GIF**
 
-This diagram demonstrates the workflow for querying GIFs from the Giphy API:
+This diagram demonstrates the workflow for saving favorite gif:
 
 ```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@show
+    participant Request as SaveFavoriteGifRequest
+    participant DTO as FavoriteGifDTO
+    participant ServiceInterface as GifServiceInterface
+    participant Service as GifService
+    participant RepositoryInterface as GifRepositoryInterface
+    participant Repository as GifRepository
+    participant DB as Database
 
+    User->>API: POST /api/v1/gifs
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@store
+    Controller->>Request: Validates SaveFavoriteGifRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to FavoriteGifDTO
+    DTO->>Controller: Returns DTO
+    Controller->>ServiceInterface: Calls GifServiceInterface@saveFavoriteGif with DTO
+    ServiceInterface->>Service: Resolved to GifService (via DI container)
+    Service->>RepositoryInterface: Calls GifRepositoryInterface@saveFavoriteGif with DTO
+    RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
+    Repository->>DB: Save favorite GIF in DB
+    Controller->>Middleware: Response ready
+    Middleware->>DB: Logs service interaction
+    Middleware->>User: Returns 201
 ```
 
 ---
