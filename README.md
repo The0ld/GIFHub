@@ -109,6 +109,52 @@ flowchart LR
 
 ---
 
+### Workflow Diagrams
+
+This section contains detailed sequence diagrams to demonstrate the flow of each
+key use case within the system. These diagrams illustrate how requests are
+processed through various layers of the application, including controllers,
+middlewares, services, repositories, and external APIs.
+
+#### **1. Authenticate via API**
+
+This diagram outlines the flow for user authentication and token generation:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant Middleware as LogServiceInteraction
+    participant Controller as AuthController
+    participant Request as LoginRequest
+    participant DTO as CredentialsDTO
+    participant Service as AuthService
+    participant Repository as AuthRepository
+    participant Resource as LoginResource
+    participant DB as Database
+
+    User->>API: POST /api/auth/login
+    API->>Middleware: Passes request
+    Middleware->>Controller: Calls AuthController@login
+    Controller->>Request: Validates LoginRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to CredentialsDTO
+    DTO->>Controller: Returns DTO
+    Controller->>Service: Calls AuthService@login with DTO
+    Service->>Repository: Calls AuthRepository@authenticate with DTO
+    Repository->>DB: Queries user by email
+    DB->>Repository: Returns user record
+    Repository->>Service: Verifies credentials and returns User
+    Service->>Controller: Returns token result
+    Controller->>Resource: Wraps token result into LoginResource
+    Resource->>Controller: Returns formatted JSON response
+    Controller->>Middleware: Response ready
+    Middleware->>DB: Logs service interaction
+    Middleware->>User: Returns JSON response with access token
+```
+
+---
+
 ## System Requirements
 
 No special requirements are needed on your host machine, as all dependencies
