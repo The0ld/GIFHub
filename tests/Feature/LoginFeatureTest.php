@@ -57,7 +57,7 @@ class LoginFeatureTest extends TestCase
             'The token should expire in 30 minutes.'
         );
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         unset($payload['password']);
 
@@ -88,7 +88,7 @@ class LoginFeatureTest extends TestCase
                      'message' => 'Invalid credentials',
                  ]);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         unset($payload['password']);
 
@@ -114,9 +114,10 @@ class LoginFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['password']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals('api/auth/login', $log->service);
+        $this->assertEquals(['email' => 'test@example.com'], $log->request_body);
         $this->assertEquals(422, $log->response_status);
         $this->assertIsArray($log->response_body);
         $this->assertEquals('127.0.0.1', $log->ip_address);
@@ -131,9 +132,10 @@ class LoginFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['email']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals('api/auth/login', $log->service);
+        $this->assertEquals([], $log->request_body);
         $this->assertEquals(422, $log->response_status);
         $this->assertIsArray($log->response_body);
         $this->assertEquals('127.0.0.1', $log->ip_address);
@@ -146,9 +148,10 @@ class LoginFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['email', 'password']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals('api/auth/login', $log->service);
+        $this->assertEquals([], $log->request_body);
         $this->assertEquals(422, $log->response_status);
         $this->assertIsArray($log->response_body);
         $this->assertEquals('127.0.0.1', $log->ip_address);
@@ -170,7 +173,7 @@ class LoginFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['email']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals('api/auth/login', $log->service);
         $this->assertEquals(['email' => 'test'], $log->request_body);
@@ -189,9 +192,10 @@ class LoginFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['password']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals('api/auth/login', $log->service);
+        $this->assertEquals(['email' => 'test@gmail.com'], $log->request_body);
         $this->assertEquals(422, $log->response_status);
         $this->assertIsArray($log->response_body);
         $this->assertEquals('127.0.0.1', $log->ip_address);

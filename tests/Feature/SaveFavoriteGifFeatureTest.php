@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\ServiceLog;
 use App\Models\User;
+use App\Policies\FavoriteGifPolicy;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -61,7 +63,7 @@ class SaveFavoriteGifFeatureTest extends TestCase
         // Assert: Verify that the response is successful
         $response->assertStatus(201);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);
@@ -85,7 +87,7 @@ class SaveFavoriteGifFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['alias', 'user_id', 'gif_id']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);
@@ -115,7 +117,7 @@ class SaveFavoriteGifFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['gif_id']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);
@@ -145,12 +147,49 @@ class SaveFavoriteGifFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['alias']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);
         $this->assertEquals($payload, $log->request_body);
         $this->assertEquals(422, $log->response_status);
+        $this->assertIsArray($log->response_body);
+        $this->assertEquals('127.0.0.1', $log->ip_address);
+        $this->assertStringEndsWith('ms', $log->duration);
+    }
+
+    /**
+     * Saving favorite GIF fails with user not authorized.
+     */
+    public function test_save_favorite_gif_fails_with_user_not_authorized(): void
+    {
+        $payload = [
+            'gif_id' => 'YsTs5ltWtEhnq',
+            'alias' => 'alias',
+            'user_id' => $this->user->id,
+        ];
+
+        // Simulate that the 'save' policy throws an AuthorizationException
+        $this->mock(FavoriteGifPolicy::class, function ($mock) {
+            $mock->shouldReceive('save')->andThrow(new AuthorizationException());
+        });
+
+        // Act: Make the save request with an invalid alias.
+        $response = $this->actingAs($this->user)
+                         ->postJson('/api/v1/gifs', $payload);
+
+        // Assert: Verify that the response returns a 403 error with validation errors.
+        $response->assertStatus(403)
+                 ->assertJson([
+                     'message' => 'You are not authorized to save this GIF.',
+                 ]);
+
+        $log = ServiceLog::orderBy('id', 'desc')->first();
+
+        $this->assertEquals($this->user->id, $log->user_id);
+        $this->assertEquals('api/v1/gifs', $log->service);
+        $this->assertEquals($payload, $log->request_body);
+        $this->assertEquals(403, $log->response_status);
         $this->assertIsArray($log->response_body);
         $this->assertEquals('127.0.0.1', $log->ip_address);
         $this->assertStringEndsWith('ms', $log->duration);
@@ -182,7 +221,7 @@ class SaveFavoriteGifFeatureTest extends TestCase
                      'message' => 'There is already a favorite GIF with this ID for this user.'
                  ]);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);

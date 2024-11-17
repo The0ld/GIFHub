@@ -11,6 +11,7 @@ use App\Http\Requests\{GifFilterRequest, SaveFavoriteGifRequest};
 use App\Http\Resources\{GifResource, PaginationResource};
 use App\Helpers\ApiResponse;
 use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class GifController extends Controller
 {
@@ -33,8 +34,8 @@ class GifController extends Controller
 
             return ApiResponse::success(
                 data: GifResource::collection($gifList->gifs),
+                pagination: new PaginationResource($gifList->pagination),
                 statusCode: 200,
-                pagination: new PaginationResource($gifList->pagination)
             );
         } catch (GiphyClientException $e) {
             return ApiResponse::error($e->getMessage(), $e->getStatusCode());
@@ -58,6 +59,8 @@ class GifController extends Controller
             );
         } catch(DuplicateFavoriteGifException $de) {
             return ApiResponse::error($de->getMessage(), 409);
+        } catch(AuthorizationException $ae) {
+            return ApiResponse::error('You are not authorized to save this GIF.', 403);
         } catch(Exception $e) {
             return ApiResponse::error('Unexpected error.', 500);
         }

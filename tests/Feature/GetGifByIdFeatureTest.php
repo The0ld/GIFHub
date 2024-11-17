@@ -61,7 +61,7 @@ class GetGifByIdFeatureTest extends TestCase
                     ],
                  ]);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs/YsTs5ltWtEhnq', $log->service);
@@ -84,7 +84,7 @@ class GetGifByIdFeatureTest extends TestCase
         // Assert: Verify that the response returns a 404 error.
         $response->assertStatus(404);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs/xH0BU4VyKF40qLqjma', $log->service);
@@ -107,7 +107,7 @@ class GetGifByIdFeatureTest extends TestCase
         // Assert: Verify that the response returns a 422 error.
         $response->assertStatus(422);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
         $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs/invalid$id', $log->service);

@@ -17,5 +17,7 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
-/storage/oauth-private.key
-/storage/oauth-public.key
+/storage/app
+/storage/framework
+/storage/logs
+/bootstrap/cache

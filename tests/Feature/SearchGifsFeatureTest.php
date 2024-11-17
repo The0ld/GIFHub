@@ -74,8 +74,9 @@ class SearchGifsFeatureTest extends TestCase
                      ],
                  ]);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
+        $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);
         $this->assertEquals($payload, $log->request_body);
         $this->assertEquals(200, $log->response_status);
@@ -108,8 +109,9 @@ class SearchGifsFeatureTest extends TestCase
                      ],
                  ]);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
+        $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);
         $this->assertEquals($payload, $log->request_body);
         $this->assertEquals(200, $log->response_status);
@@ -153,8 +155,9 @@ class SearchGifsFeatureTest extends TestCase
                      ],
                  ]);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
+        $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);
         $this->assertEquals($payload, $log->request_body);
         $this->assertEquals(200, $log->response_status);
@@ -210,8 +213,9 @@ class SearchGifsFeatureTest extends TestCase
         $response->assertStatus(422)
                  ->assertJsonValidationErrors(['q']);
 
-        $log = ServiceLog::latest()->first();
+        $log = ServiceLog::orderBy('id', 'desc')->first();
 
+        $this->assertEquals($this->user->id, $log->user_id);
         $this->assertEquals('api/v1/gifs', $log->service);
         $this->assertEquals($payload, $log->request_body);
         $this->assertEquals(422, $log->response_status);
