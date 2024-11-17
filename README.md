@@ -38,7 +38,11 @@ Copy the `.env.example` file as `.env` to configure your environment:
 cp .env.example .env
 ```
 
-This will set up all necessary environment variables for the Dockerized environment.
+Ensure you add your Giphy API Key in the .env file:
+
+```env
+GIPHY_API_KEY=your_giphy_api_key_here
+```
 
 ### Step 3: Build and Start Containers
 
@@ -55,9 +59,15 @@ This command will:
 - Generate the application key and Passport keys.
 - Run database migrations and seed sample data.
 
-### Step 4: Access the API
+### Step 4: Start the Server
 
-Once the containers are running, you can access the API at:
+To start the application and serve it locally:
+
+```bash
+make serve
+```
+
+The API will be accessible at:
 
 ```bash
 http://localhost:8000/api
@@ -85,7 +95,7 @@ with the API.
     ```
 
 3. The collection includes:
-    - Authentication routes (login, register).
+    - Authentication routes (login).
     - Favorite GIF management routes.
     - GIF search routes.
 
