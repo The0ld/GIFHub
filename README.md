@@ -207,13 +207,70 @@ sequenceDiagram
     GifListDTO->>PaginationDTO: Builds PaginationDTO for pagination details
     GifClientDTO->>GifListDTO: Returns processed GIF DTOs
     PaginationDTO->>GifListDTO: Returns pagination DTO
-    GifListDTO->>Service: Returns structured DTO list
+    GifListDTO->>Client: Returns structured DTO list
+    Client->>Service: Returns structured DTO list
     Service->>Controller: Returns GifListDTO
     Controller->>Resource: Formats response with ApiResponse
     Resource->>Controller: Returns formatted JSON response
     Controller->>LogMiddleware: Response ready
     LogMiddleware->>DB: Logs service interaction
     LogMiddleware->>User: Returns JSON response with GIF list data and pagination
+```
+
+#### **3. Search GIF By ID**
+
+This diagram demonstrates the workflow for get an specific GIF from the Giphy API:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@show
+    participant ServiceInterface as GifServiceInterface
+    participant Service as GifService
+    participant ClientInterface as GifClientInterface
+    participant Client as GiphyClient
+    participant Redis as Redis Cache
+    participant Giphy as Giphy API
+    participant GifClientDTO
+    participant Resource as GifResource
+    participant DB as Database
+
+    User->>API: GET /api/v1/gifs/{id}
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@show
+    Controller->>ServiceInterface: Calls GifServiceInterface@getGifById with ID
+    ServiceInterface->>Service: Resolved to GifService (via DI container)
+    Service->>ClientInterface: Calls GifClientInterface@getGifById with ID
+    ClientInterface->>Client: Resolved to GiphyClient (via DI container)
+    Client->>Redis: Checks Redis cache for key
+    alt Cache Hit
+        Redis->>Client: Returns cached GIF data
+    else Cache Miss
+        Client->>Giphy: Queries Giphy API with filters
+        Giphy->>Client: Returns GIF data
+        Client->>Redis: Stores GIF data in cache
+    end
+    Client->>GifClientDTO: Constructs GifClientDTO
+    GifClientDTO->>Client: Returns GifClientDTO
+    Client->>Service: Returns GifClientDTO
+    Service->>Controller: Returns GifClientDTO
+    Controller->>Resource: Formats response with ApiResponse
+    Resource->>Controller: Returns formatted JSON response
+    Controller->>LogMiddleware: Response ready
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>User: Returns JSON response with GIF list data and pagination
+```
+
+#### **4. Search for GIFs**
+
+This diagram demonstrates the workflow for querying GIFs from the Giphy API:
+
+```mermaid
+
 ```
 
 ---
