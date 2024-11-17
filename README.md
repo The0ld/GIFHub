@@ -37,7 +37,7 @@ erDiagram
         string alias
         datetime created_at
         datetime updated_at
-        UNIQUE(user_id, gif_id)
+        %% UNIQUE constraint: user_id + gif_id must be unique
     }
     SERVICE_LOG {
         int id PK
