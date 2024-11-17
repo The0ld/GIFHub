@@ -212,37 +212,57 @@ sequenceDiagram
 
     User->>API: GET /api/v1/gifs?q=<query>&limit=<limit>&offset=<offset>
     API->>AuthMiddleware: Validates token
-    AuthMiddleware->>LogMiddleware: Passes validated request
-    LogMiddleware->>Controller: Calls GifController@index
-    Controller->>Request: Validates GifFilterRequest
-    Request->>Controller: Returns validated request
-    Controller->>DTO: Converts request to GifFilterDTO
-    DTO->>Controller: Returns DTO
-    Controller->>ServiceInterface: Calls GifServiceInterface@filterGifs with DTO
-    ServiceInterface->>Service: Resolved to GifService (via DI container)
-    Service->>ClientInterface: Calls GifClientInterface@filterGifs with DTO
-    ClientInterface->>Client: Resolved to GiphyClient (via DI container)
-    Client->>Redis: Checks Redis cache for key
-    alt Cache Hit
-        Redis->>Client: Returns cached GIF list
-    else Cache Miss
-        Client->>Giphy: Queries Giphy API with filters
-        Giphy->>Client: Returns raw GIF data
-        Client->>Redis: Stores GIF data in cache
+    alt User Not Authenticated
+        AuthMiddleware->>User: Returns 401 Unauthenticated Error
+    else
+        AuthMiddleware->>LogMiddleware: Passes validated request
+        LogMiddleware->>Controller: Calls GifController@index
+        Controller->>Request: Validates GifFilterRequest
+        alt Validation Fails
+            Request-->>Controller: ValidationException (422)
+            Controller->>LogMiddleware: Prepares error response
+            LogMiddleware->>DB: Logs service interaction
+            LogMiddleware->>User: Returns 422 Validation Error
+        else Validation Succeeds
+            Request->>Controller: Returns validated request
+            Controller->>DTO: Converts request to GifFilterDTO
+            DTO->>Controller: Returns DTO
+            Controller->>ServiceInterface: Calls GifServiceInterface@filterGifs with DTO
+            ServiceInterface->>Service: Resolved to GifService (via DI container)
+            Service->>ClientInterface: Calls GifClientInterface@filterGifs with DTO
+            ClientInterface->>Client: Resolved to GiphyClient (via DI container)
+            Client->>Redis: Checks Redis cache for key
+            alt Cache Hit
+                Redis->>Client: Returns cached GIF list
+            else Cache Miss
+                Client->>Giphy: Queries Giphy API with filters
+                alt API Error Occurs
+                    Giphy-->>Client: Returns error response (401, 403, 422, 500, etc)
+                    Client-->>Service: Throws GiphyClientException
+                    Service-->>Controller: Passes exception
+                    Controller->>LogMiddleware: Prepares error response
+                    LogMiddleware->>DB: Logs service interaction
+                    LogMiddleware->>User: Returns JSON error response with appropriate code
+                else
+                    Giphy->>Client: Returns raw GIF data
+                    Client->>Redis: Stores GIF data in cache
+                end
+            end
+            Client->>GifListDTO: Constructs GifListDTO
+            GifListDTO->>GifClientDTO: Maps each GIF to GifClientDTO
+            GifListDTO->>PaginationDTO: Builds PaginationDTO for pagination details
+            GifClientDTO->>GifListDTO: Returns processed GIF DTOs
+            PaginationDTO->>GifListDTO: Returns pagination DTO
+            GifListDTO->>Client: Returns structured DTO list
+            Client->>Service: Returns structured DTO list
+            Service->>Controller: Returns GifListDTO
+            Controller->>Resource: Formats response with ApiResponse
+            Resource->>Controller: Returns formatted JSON response
+            Controller->>LogMiddleware: Response ready
+            LogMiddleware->>DB: Logs service interaction
+            LogMiddleware->>User: Returns JSON response with GIF list data and pagination
+        end
     end
-    Client->>GifListDTO: Constructs GifListDTO
-    GifListDTO->>GifClientDTO: Maps each GIF to GifClientDTO
-    GifListDTO->>PaginationDTO: Builds PaginationDTO for pagination details
-    GifClientDTO->>GifListDTO: Returns processed GIF DTOs
-    PaginationDTO->>GifListDTO: Returns pagination DTO
-    GifListDTO->>Client: Returns structured DTO list
-    Client->>Service: Returns structured DTO list
-    Service->>Controller: Returns GifListDTO
-    Controller->>Resource: Formats response with ApiResponse
-    Resource->>Controller: Returns formatted JSON response
-    Controller->>LogMiddleware: Response ready
-    LogMiddleware->>DB: Logs service interaction
-    LogMiddleware->>User: Returns JSON response with GIF list data and pagination
 ```
 
 #### **3. Search GIF By ID**
@@ -268,29 +288,44 @@ sequenceDiagram
 
     User->>API: GET /api/v1/gifs/{id}
     API->>AuthMiddleware: Validates token
-    AuthMiddleware->>LogMiddleware: Passes validated request
-    LogMiddleware->>Controller: Calls GifController@show
-    Controller->>ServiceInterface: Calls GifServiceInterface@getGifById with ID
-    ServiceInterface->>Service: Resolved to GifService (via DI container)
-    Service->>ClientInterface: Calls GifClientInterface@getGifById with ID
-    ClientInterface->>Client: Resolved to GiphyClient (via DI container)
-    Client->>Redis: Checks Redis cache for key
-    alt Cache Hit
-        Redis->>Client: Returns cached GIF data
-    else Cache Miss
-        Client->>Giphy: Queries Giphy API with filters
-        Giphy->>Client: Returns GIF data
-        Client->>Redis: Stores GIF data in cache
+    alt User Not Authenticated
+        AuthMiddleware->>User: Returns 401 Unauthenticated Error
+    else
+        AuthMiddleware->>LogMiddleware: Passes validated request
+        LogMiddleware->>Controller: Calls GifController@show
+        Controller->>ServiceInterface: Calls GifServiceInterface@getGifById with ID
+        ServiceInterface->>Service: Resolved to GifService (via DI container)
+        Service->>ClientInterface: Calls GifClientInterface@getGifById with ID
+        ClientInterface->>Client: Resolved to GiphyClient (via DI container)
+        Client->>Redis: Checks Redis cache for key
+        alt Cache Hit
+            Redis->>Client: Returns cached GIF data
+        else Cache Miss
+            Client->>Giphy: Queries Giphy API with ID
+            alt API Error Occurs
+                    Giphy-->>Client: Returns error response (401, 403, 422, 500, etc)
+                    Client-->>Service: Throws GiphyClientException
+                    Service-->>Controller: Passes exception
+                    Controller->>LogMiddleware: Prepares error response
+                    LogMiddleware->>DB: Logs service interaction
+                    LogMiddleware->>AuthMiddleware: Passes Error
+                    AuthMiddleware->>User: Returns JSON error response with appropriate code
+            else
+                Giphy->>Client: Returns GIF data
+                Client->>Redis: Stores GIF data in cache
+            end
+        end
+        Client->>GifClientDTO: Constructs GifClientDTO
+        GifClientDTO->>Client: Returns GifClientDTO
+        Client->>Service: Returns GifClientDTO
+        Service->>Controller: Returns GifClientDTO
+        Controller->>Resource: Formats response with ApiResponse
+        Resource->>Controller: Returns formatted JSON response
+        Controller->>LogMiddleware: Response ready
+        LogMiddleware->>DB: Logs service interaction
+        LogMiddleware->>AuthMiddleware: Passes Response
+        LogMiddleware->>User: Returns JSON response with GIF data
     end
-    Client->>GifClientDTO: Constructs GifClientDTO
-    GifClientDTO->>Client: Returns GifClientDTO
-    Client->>Service: Returns GifClientDTO
-    Service->>Controller: Returns GifClientDTO
-    Controller->>Resource: Formats response with ApiResponse
-    Resource->>Controller: Returns formatted JSON response
-    Controller->>LogMiddleware: Response ready
-    LogMiddleware->>DB: Logs service interaction
-    LogMiddleware->>User: Returns JSON response with GIF data
 ```
 
 #### **4. Save Favorite GIF**
@@ -304,6 +339,7 @@ sequenceDiagram
     participant AuthMiddleware as Auth:api Middleware
     participant LogMiddleware as LogServiceInteraction
     participant Controller as GifController@show
+    participant Policy as FavoriteGifPolicy@save
     participant Request as SaveFavoriteGifRequest
     participant DTO as FavoriteGifDTO
     participant ServiceInterface as GifServiceInterface
@@ -314,20 +350,62 @@ sequenceDiagram
 
     User->>API: POST /api/v1/gifs
     API->>AuthMiddleware: Validates token
-    AuthMiddleware->>LogMiddleware: Passes validated request
-    LogMiddleware->>Controller: Calls GifController@store
-    Controller->>Request: Validates SaveFavoriteGifRequest
-    Request->>Controller: Returns validated request
-    Controller->>DTO: Converts request to FavoriteGifDTO
-    DTO->>Controller: Returns DTO
-    Controller->>ServiceInterface: Calls GifServiceInterface@saveFavoriteGif with DTO
-    ServiceInterface->>Service: Resolved to GifService (via DI container)
-    Service->>RepositoryInterface: Calls GifRepositoryInterface@saveFavoriteGif with DTO
-    RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
-    Repository->>DB: Save favorite GIF in DB
-    Controller->>LogMiddleware: Response ready
-    LogMiddleware->>DB: Logs service interaction
-    LogMiddleware->>User: Returns 201
+    alt User Not Authenticated
+        AuthMiddleware->>User: Returns 401 Unauthenticated Error
+    else
+        AuthMiddleware->>LogMiddleware: Passes validated request
+        LogMiddleware->>Controller: Calls GifController@store
+        Controller->>Request: Validates SaveFavoriteGifRequest
+        alt Validation Fails
+            Request-->>Controller: ValidationException (422)
+            Controller->>LogMiddleware: Prepares error response
+            LogMiddleware->>DB: Logs service interaction
+            LogMiddleware->>AuthMiddleware: Passes Error
+            AuthMiddleware->>User: Returns 422 Validation Error
+        else
+            Request->>Controller: Returns validated request
+            Controller->>DTO: Converts request to FavoriteGifDTO
+            DTO->>Controller: Returns DTO
+            Request->>Policy: Validates User Authorization
+            alt Validation Fails
+                Policy->Controller: AuthorizationException (403)
+                Controller->>LogMiddleware: Prepares error response
+                LogMiddleware->>DB: Logs service interaction
+                LogMiddleware->>AuthMiddleware: Passes Error
+                AuthMiddleware->>User: Returns 422 Validation Error
+            else
+                Policy->Controller: User Authorizated
+                Controller->>ServiceInterface: Calls GifServiceInterface@saveFavoriteGif with DTO
+                ServiceInterface->>Service: Resolved to GifService (via DI container)
+                Service->>RepositoryInterface: Calls GifRepositoryInterface@saveFavoriteGif with DTO
+                RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
+                Repository->>DB: Save favorite GIF in DB
+                alt DB Error Occurs
+                    DB->>Repository: Throws QueryException
+                    alt Exception code 23000
+                        Repository-->>Service: Throws DuplicateFavoriteGifException
+                        Service-->>Controller: Passes Exception
+                        Controller->>LogMiddleware: Prepares error response
+                        LogMiddleware->>DB: Logs service interaction
+                        LogMiddleware->>AuthMiddleware: Passes Error
+                        AuthMiddleware->>User: Returns 409 Validation Error
+                    else
+                        Repository-->>Service: Passes Exception
+                        Service-->>Controller: Passes Exception
+                        Controller->>LogMiddleware: Prepares error response
+                        LogMiddleware->>DB: Logs service interaction
+                        LogMiddleware->>AuthMiddleware: Passes Error
+                        AuthMiddleware->>User: Returns 500 Validation Error
+                    end
+                else
+                    Controller->>LogMiddleware: Response ready
+                    LogMiddleware->>DB: Logs service interaction
+                    LogMiddleware->>AuthMiddleware: Passes Response
+                    AuthMiddleware->>User: Returns 201
+                end
+            end
+        end
+    end
 ```
 
 ---
