@@ -86,21 +86,20 @@ The following diagram illustrates the main use cases of the application:
 
 ```mermaid
 %% Use Case Diagram
-usecaseDiagram
-    actor User as "User"
-    actor System as "System"
+flowchart LR
+    User["User"] -->|Initiates authentication| Authenticate["Authenticate via API"]
+    User -->|Searches for content| SearchGIFs["Search for GIFs"]
+    User -->|Requests specific GIF data| GetGIFDetails["Get GIF details"]
+    User -->|Marks a GIF as a favorite| SaveGIF["Save GIF as favorite"]
 
-    User --> (Authenticate via API)
-    User --> (Search for GIFs)
-    User --> (Get GIF details)
-    User --> (Save GIF as favorite)
+    subgraph System["System"]
+        LogInteractions["Log service interactions"]
+    end
 
-    System --> (Log service interactions)
-
-    (Authenticate via API) ..> (Log service interactions) : Includes
-    (Search for GIFs) ..> (Log service interactions) : Includes
-    (Get GIF details) ..> (Log service interactions) : Includes
-    (Save GIF as favorite) ..> (Log service interactions) : Includes
+    Authenticate -->|Logs authentication events| LogInteractions
+    SearchGIFs -->|Logs search queries| LogInteractions
+    GetGIFDetails -->|Logs GIF detail requests| LogInteractions
+    SaveGIF -->|Logs favorite save actions| LogInteractions
 ```
 
 ### Usage
