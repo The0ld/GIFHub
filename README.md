@@ -72,8 +72,8 @@ with the API.
 
 ### Download Links
 
-- **Collection:** [GIFHub Postman Collection](https://example.com/gifhub-postman-collection.json)
-- **Environment:** [GIFHub Postman Environment](https://example.com/gifhub-postman-environment.json)
+- **Collection:** [GIFHub Postman Collection](https://github.com/The0ld/GIFHub/blob/main/docs/GIFHub%20API.postman_collection.json)
+- **Environment:** [GIFHub Postman Environment](https://github.com/The0ld/GIFHub/blob/main/docs/GIFHub.postman_environment.json)
 
 ### Instructions
 
