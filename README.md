@@ -182,6 +182,7 @@ sequenceDiagram
         Controller->>Middleware: Response ready
         Middleware->>DB: Logs service interaction
         Middleware->>User: Returns JSON response with access token
+    end
 ```
 
 #### **2. Search for GIFs**
