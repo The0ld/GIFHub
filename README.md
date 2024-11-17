@@ -301,8 +301,8 @@ sequenceDiagram
     RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
     Repository->>DB: Save favorite GIF in DB
     Controller->>Middleware: Response ready
-    Middleware->>DB: Logs service interaction
-    Middleware->>User: Returns 201
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>User: Returns 201
 ```
 
 ---
