@@ -262,7 +262,7 @@ graph LR
 
 ---
 
-### Workflow Diagrams
+### Sequence Diagrams
 
 This section contains detailed sequence diagrams to demonstrate the flow of each
 key use case within the system. These diagrams illustrate how requests are
