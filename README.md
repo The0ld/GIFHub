@@ -8,6 +8,61 @@ security, featuring Passport authentication and Redis-based caching.
 
 ---
 
+### Database Design
+
+The application follows a relational database structure with the following key entities:
+
+- **Users**: Represents authenticated users in the system.
+- **Favorite GIFs**: Stores GIFs saved by users, allowing aliasing for personalized identification.
+- **Service Logs**: Tracks API interactions for monitoring and debugging purposes.
+
+Below is the Entity-Relationship Diagram (ERD) that illustrates these relationships:
+
+```mermaid
+erDiagram
+    USER {
+        int id PK
+        string name
+        string email
+        string password
+        datetime email_verified_at
+        datetime created_at
+        datetime updated_at
+        string remember_token
+    }
+    FAVORITE_GIF {
+        int id PK
+        int user_id FK
+        string gif_id
+        string alias
+        datetime created_at
+        datetime updated_at
+    }
+    SERVICE_LOG {
+        int id PK
+        int user_id FK
+        string service
+        json request_body
+        json response_body
+        int response_status
+        string ip_address
+        string duration
+        datetime created_at
+        datetime updated_at
+    }
+
+    USER ||--o{ FAVORITE_GIF : "has many"
+    USER ||--o{ SERVICE_LOG : "has many"
+```
+
+This diagram demonstrates:
+
+- **One-to-Many Relationships**:
+- Users can have multiple favorite GIFs.
+- Users can generate multiple service logs.
+
+---
+
 ## System Requirements
 
 No special requirements are needed on your host machine, as all dependencies
