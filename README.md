@@ -300,7 +300,7 @@ sequenceDiagram
     Service->>RepositoryInterface: Calls GifRepositoryInterface@saveFavoriteGif with DTO
     RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
     Repository->>DB: Save favorite GIF in DB
-    Controller->>Middleware: Response ready
+    Controller->>LogMiddleware: Response ready
     LogMiddleware->>DB: Logs service interaction
     LogMiddleware->>User: Returns 201
 ```
