@@ -85,7 +85,8 @@ The following diagram illustrates the main use cases of the application:
     2. **Search for GIFs**: Query GIFs based on a keyword.
     3. **Get GIF details**: Fetch detailed information about a specific GIF.
     4. **Save GIF as favorite**: Add a GIF to the user's list of favorites.
-    5. **Log service interactions**: Automatically log all interactions.
+    5. **Error Handling**: Manage various error scenarios.
+    6. **Log service interactions**: Automatically log all interactions.
 
 ```mermaid
 %% Use Case Diagram
