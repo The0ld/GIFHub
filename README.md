@@ -37,6 +37,7 @@ erDiagram
         string alias
         datetime created_at
         datetime updated_at
+        UNIQUE(user_id, gif_id)
     }
     SERVICE_LOG {
         int id PK
