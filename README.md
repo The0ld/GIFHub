@@ -8,6 +8,98 @@ security, featuring Passport authentication and Redis-based caching.
 
 ---
 
+## Table of Contents
+
+1. [System Requirements](#system-requirements)
+2. [Deployment Instructions](#deployment-instructions)
+3. [Usage Instructions](#usage-instructions)
+4. [Architecture and Design Documentation](#architecture-and-design-documentation)
+    - [Database Design](#database-design)
+    - [Use Case Diagram](#use-case-diagram)
+    - [Sequence Diagrams](#sequence-diagrams)
+5. [Postman Collection and Environment](#postman-collection-and-environment)
+6. [Useful Commands](#useful-commands)
+7. [Additional Resources](#additional-resources)
+8. [License](#license)
+
+---
+
+## System Requirements
+
+No special requirements are needed on your host machine, as all dependencies
+are containerized using Docker. Just ensure you have:
+
+- **Docker:** Version 20.10 or higher.
+- **Docker Compose:** Version 1.29 or higher.
+- **Make:** Installed on your machine (optional but recommended).
+
+---
+
+## Deployment Instructions
+
+### Step 1: Clone the Repository
+
+Clone the repository to your local machine:
+
+```bash
+git clone <REPOSITORY_URL>
+cd gifhub
+```
+
+### Step 2: Configure Environment Variables
+
+Copy the `.env.example` file as `.env` to configure your environment:
+
+```bash
+cp .env.example .env
+```
+
+Ensure you add your Giphy API Key in the .env file:
+
+```env
+GIPHY_API_KEY=your_giphy_api_key_here
+```
+
+### Step 3: Build and Start Containers
+
+Run the following command to build and start the Docker services:
+
+```bash
+make setup
+```
+
+This command will:
+
+- Build the required containers.
+- Install Laravel dependencies.
+- Generate the application key and Passport keys.
+- Run database migrations and seed sample data.
+
+### Step 4: Start the Server
+
+To start the application and serve it locally:
+
+```bash
+make serve
+```
+
+The API will be accessible at:
+
+```bash
+http://localhost:8000/api
+```
+
+---
+
+## Usage Instructions
+
+- Users can explore the API endpoints defined in the project.
+- All interactions are logged automatically for auditing and debugging purposes.
+
+---
+
+## Architecture and Design Documentation
+
 ### Database Design
 
 The application follows a relational database structure with the following key entities:
@@ -894,73 +986,6 @@ sequenceDiagram
     LogMiddleware->>DB: Logs service interaction
     LogMiddleware->>AuthMiddleware: Passes Error
     AuthMiddleware->>User: Returns 500 Internal Server Error
-```
-
----
-
-## System Requirements
-
-No special requirements are needed on your host machine, as all dependencies
-are containerized using Docker. Just ensure you have:
-
-- **Docker:** Version 20.10 or higher.
-- **Docker Compose:** Version 1.29 or higher.
-- **Make:** Installed on your machine (optional but recommended).
-
----
-
-## Deployment Instructions
-
-### Step 1: Clone the Repository
-
-Clone the repository to your local machine:
-
-```bash
-git clone <REPOSITORY_URL>
-cd gifhub
-```
-
-### Step 2: Configure Environment Variables
-
-Copy the `.env.example` file as `.env` to configure your environment:
-
-```bash
-cp .env.example .env
-```
-
-Ensure you add your Giphy API Key in the .env file:
-
-```env
-GIPHY_API_KEY=your_giphy_api_key_here
-```
-
-### Step 3: Build and Start Containers
-
-Run the following command to build and start the Docker services:
-
-```bash
-make setup
-```
-
-This command will:
-
-- Build the required containers.
-- Install Laravel dependencies.
-- Generate the application key and Passport keys.
-- Run database migrations and seed sample data.
-
-### Step 4: Start the Server
-
-To start the application and serve it locally:
-
-```bash
-make serve
-```
-
-The API will be accessible at:
-
-```bash
-http://localhost:8000/api
 ```
 
 ---
