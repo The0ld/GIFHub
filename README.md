@@ -128,7 +128,9 @@ sequenceDiagram
     participant Controller as AuthController
     participant Request as LoginRequest
     participant DTO as CredentialsDTO
+    participant ServiceInterface as AuthServiceInterface
     participant Service as AuthService
+    participant RepositoryInterface as AuthRepositoryInterface
     participant Repository as AuthRepository
     participant Resource as LoginResource
     participant DB as Database
@@ -140,8 +142,10 @@ sequenceDiagram
     Request->>Controller: Returns validated request
     Controller->>DTO: Converts request to CredentialsDTO
     DTO->>Controller: Returns DTO
-    Controller->>Service: Calls AuthService@login with DTO
-    Service->>Repository: Calls AuthRepository@authenticate with DTO
+    Controller->>ServiceInterface: Calls AuthServiceInterface@login with DTO
+    ServiceInterface->>Service: Resolved to AuthService (via DI container)
+    Service->>RepositoryInterface: Calls AuthRepositoryInterface@authenticate with DTO
+    RepositoryInterface->>Repository: Resolved to AuthRepository (via DI container)
     Repository->>DB: Queries user by email
     DB->>Repository: Returns user record
     Repository->>Service: Verifies credentials and returns User
