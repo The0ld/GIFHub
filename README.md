@@ -89,38 +89,77 @@ The following diagram illustrates the main use cases of the application:
 
 ```mermaid
 %% Use Case Diagram
-flowchart LR
-    User["User"] -->|Initiates authentication| Authenticate["Authenticate via API"]
-    Authenticate -->|Logs authentication events| LogInteractions
-    Authenticate -->|Handles 422 Validation Error | ValidationError["Validation Error"]
+graph LR
+    %% Node styles
+    classDef actorStyle fill:#474943,stroke:#000,stroke-width:1px
+    classDef useCaseStyle fill:#024A86,stroke:#000,stroke-width:1px,rx:10,ry:10
+    classDef errorStyle fill:#C82A54,stroke:#000,stroke-width:1px,rx:5,ry:5
 
-    User -->|Searches for content| SearchGIFs["Search for GIFs"]
-    SearchGIFs -->|Logs search queries| LogInteractions
-    SearchGIFs -->|Handles 422 Validation Error | ValidationError["Validation Error"]
-    SearchGIFs -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
+    %% Actors
+    User[User]
+    System[System]
+    class User,System actorStyle
 
-    User -->|Requests specific GIF data| GetGIFDetails["Get GIF details"]
-    GetGIFDetails -->|Logs GIF detail requests| LogInteractions
-    GetGIFDetails -->|Handles 404 Not Found| NotFound["GIF Not Found"]
-    GetGIFDetails -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
-    GetGIFDetails -->|Handles 422 Validation Error| ValidationError
-
-    User -->|Marks a GIF as a favorite| SaveGIF["Save GIF as favorite"]
-    SaveGIF -->|Logs favorite save actions| LogInteractions
-    SaveGIF -->|Handles 422 Validation Error| ValidationError
-    SaveGIF -->|Handles 403 Unauthorized Error| UnauthorizedError["Unauthorized Action"]
-    SaveGIF -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
-    SaveGIF -->|Handles 409 Duplicate Entry| DuplicateEntryError["Duplicate Entry Error"]
-
-    subgraph System["System"]
-        LogInteractions["Log service interactions"]
+    %% Use Cases
+    subgraph "Use Cases"
+        Authenticate(Authenticate via API)
+        SearchGIFs(Search for GIFs)
+        GetGIFDetails(Get GIF Details)
+        SaveGIF(Save GIF as Favorite)
+        LogInteractions(Log Service Interactions)
     end
+    class Authenticate,SearchGIFs,GetGIFDetails,SaveGIF,LogInteractions useCaseStyle
 
-    ValidationError --> LogInteractions
-    NotFoundError --> LogInteractions
-    UnauthenticatedError --> LogInteractions
-    UnauthorizedError --> LogInteractions
-    DuplicateEntryError --> LogInteractions
+    %% Errors
+    subgraph "Error Handling"
+        ValidationError(Validation Error)
+        UnauthenticatedError(Unauthenticated Action)
+        UnauthorizedError(Unauthorized Action)
+        NotFoundError(GIF Not Found)
+        DuplicateEntryError(Duplicate Entry Error)
+    end
+    class ValidationError,UnauthenticatedError,UnauthorizedError,NotFoundError,DuplicateEntryError errorStyle
+
+    %% User interactions
+    User -->|Initiates authentication| Authenticate
+    User -->|Searches for content| SearchGIFs
+    User -->|Requests GIF details| GetGIFDetails
+    User -->|Saves GIF as favorite| SaveGIF
+
+    %% System interactions
+    System -->|Performs| LogInteractions
+
+    %% Use cases trigger logging
+    Authenticate -->|Triggers logging| System
+    SearchGIFs -->|Triggers logging| System
+    GetGIFDetails -->|Triggers logging| System
+    SaveGIF -->|Triggers logging| System
+
+    %% Error handling for Authenticate
+    Authenticate -->|Handles 422 Validation Error| ValidationError
+    Authenticate -->|Handles 401 Unauthenticated Error| UnauthenticatedError
+
+    %% Error handling for SearchGIFs
+    SearchGIFs -->|Handles 422 Validation Error| ValidationError
+    SearchGIFs -->|Handles 401 Unauthenticated Error| UnauthenticatedError
+
+    %% Error handling for GetGIFDetails
+    GetGIFDetails -->|Handles 422 Validation Error| ValidationError
+    GetGIFDetails -->|Handles 401 Unauthenticated Error| UnauthenticatedError
+    GetGIFDetails -->|Handles 404 Not Found Error| NotFoundError
+
+    %% Error handling for SaveGIF
+    SaveGIF -->|Handles 422 Validation Error| ValidationError
+    SaveGIF -->|Handles 401 Unauthenticated Error| UnauthenticatedError
+    SaveGIF -->|Handles 403 Unauthorized Error| UnauthorizedError
+    SaveGIF -->|Handles 409 Duplicate Entry| DuplicateEntryError
+
+    %% Errors trigger logging
+    ValidationError -->|Triggers logging| System
+    UnauthenticatedError -->|Triggers logging| System
+    UnauthorizedError -->|Triggers logging| System
+    NotFoundError -->|Triggers logging| System
+    DuplicateEntryError -->|Triggers logging| System
 ```
 
 ### Usage
