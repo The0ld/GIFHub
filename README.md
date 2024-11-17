@@ -108,7 +108,7 @@ flowchart LR
     SaveGIF -->|Logs favorite save actions| LogInteractions
     SaveGIF -->|Handles 422 Validation Error| ValidationError
     SaveGIF -->|Handles 403 Unauthorized Error| UnauthorizedError["Unauthorized Action"]
-    SearchGIFs -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
+    SaveGIF -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
 
     subgraph System["System"]
         LogInteractions["Log service interactions"]
