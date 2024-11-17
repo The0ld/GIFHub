@@ -68,6 +68,48 @@ This diagram demonstrates:
 
 ---
 
+## Use Case Diagram
+
+The following diagram illustrates the main use cases of the application:
+
+- **Actors**:
+
+  - **User**: Represents the API user.
+  - **System**: Handles interaction logging.
+
+- **Key Use Cases**:
+    1. **Authenticate via API**: User authentication and token generation.
+    2. **Search for GIFs**: Query GIFs based on a keyword.
+    3. **Get GIF details**: Fetch detailed information about a specific GIF.
+    4. **Save GIF as favorite**: Add a GIF to the user's list of favorites.
+    5. **Log service interactions**: Automatically log all interactions.
+
+```mermaid
+%% Use Case Diagram
+usecaseDiagram
+    actor User as "User"
+    actor System as "System"
+
+    User --> (Authenticate via API)
+    User --> (Search for GIFs)
+    User --> (Get GIF details)
+    User --> (Save GIF as favorite)
+
+    System --> (Log service interactions)
+
+    (Authenticate via API) ..> (Log service interactions) : Includes
+    (Search for GIFs) ..> (Log service interactions) : Includes
+    (Get GIF details) ..> (Log service interactions) : Includes
+    (Save GIF as favorite) ..> (Log service interactions) : Includes
+```
+
+### Usage
+
+- Users can explore the API endpoints defined in the project.
+- All interactions are logged automatically for auditing and debugging purposes.
+
+---
+
 ## System Requirements
 
 No special requirements are needed on your host machine, as all dependencies
