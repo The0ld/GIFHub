@@ -91,18 +91,33 @@ The following diagram illustrates the main use cases of the application:
 %% Use Case Diagram
 flowchart LR
     User["User"] -->|Initiates authentication| Authenticate["Authenticate via API"]
+    Authenticate -->|Logs authentication events| LogInteractions
+    Authenticate -->|Handles 422 Validation Error | ValidationError["Validation Error"]
+
     User -->|Searches for content| SearchGIFs["Search for GIFs"]
+    SearchGIFs -->|Logs search queries| LogInteractions
+    SearchGIFs -->|Handles 422 Validation Error | ValidationError["Validation Error"]
+    SearchGIFs -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
+
     User -->|Requests specific GIF data| GetGIFDetails["Get GIF details"]
+    GetGIFDetails -->|Logs GIF detail requests| LogInteractions
+    GetGIFDetails -->|Handles 404 Not Found| NotFound["GIF Not Found"]
+    GetGIFDetails -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
+
     User -->|Marks a GIF as a favorite| SaveGIF["Save GIF as favorite"]
+    SaveGIF -->|Logs favorite save actions| LogInteractions
+    SaveGIF -->|Handles 422 Validation Error| ValidationError
+    SaveGIF -->|Handles 403 Unauthorized Error| UnauthorizedError["Unauthorized Action"]
+    SearchGIFs -->|Handles 401 Unauthenticated Error| UnauthenticatedError["Unauthenticated Action"]
 
     subgraph System["System"]
         LogInteractions["Log service interactions"]
     end
 
-    Authenticate -->|Logs authentication events| LogInteractions
-    SearchGIFs -->|Logs search queries| LogInteractions
-    GetGIFDetails -->|Logs GIF detail requests| LogInteractions
-    SaveGIF -->|Logs favorite save actions| LogInteractions
+    ValidationError --> LogInteractions
+    NotFound --> LogInteractions
+    UnauthorizedError --> LogInteractions
+    UnauthenticatedError --> LogInteractions
 ```
 
 ### Usage
