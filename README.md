@@ -62,6 +62,10 @@ This diagram demonstrates:
 - Users can have multiple favorite GIFs.
 - Users can generate multiple service logs.
 
+### Notes on Database Design
+
+- **Unique Constraint on Favorite GIFs**: The `favorite_gifs` table enforces a **unique constraint** on the combination of `user_id` and `gif_id`. This ensures that a user cannot save the same GIF more than once, maintaining data consistency.
+
 ---
 
 ## System Requirements
