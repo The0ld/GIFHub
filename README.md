@@ -139,7 +139,36 @@ middlewares, services, repositories, and external APIs.
 
 #### **1. Authenticate via API**
 
-This diagram outlines the flow for user authentication and token generation:
+These diagrams outlines the flow for user authentication and token generation:
+
+#### **1.1 Authenticate via API - Validation Fails**
+
+**Description:** This diagram illustrates the workflow when the login request validation fails due to invalid input data (e.g., missing email or password).
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant Middleware as LogServiceInteraction
+    participant Controller as AuthController
+    participant Request as LoginRequest
+    participant DB as Database
+
+    User->>API: POST /api/auth/login
+    API->>Middleware: Passes request
+    Middleware->>Controller: Calls AuthController@login
+    Controller->>Request: Validates LoginRequest
+    Request-->>Controller: ValidationException (422)
+    Controller->>Middleware: Prepares Error Response
+    Middleware->>DB: Logs service interaction
+    Middleware->>User: Returns 422 Validation Error
+```
+
+---
+
+#### **1.2 Authenticate via API - Authentication Succeeds**
+
+**Description:** This diagram shows the workflow when the user provides valid credentials and successfully authenticates, receiving an access token.
 
 ```mermaid
 sequenceDiagram
@@ -160,34 +189,251 @@ sequenceDiagram
     API->>Middleware: Passes request
     Middleware->>Controller: Calls AuthController@login
     Controller->>Request: Validates LoginRequest
-    alt Validation Fails
-        Request-->>Controller: ValidationException (422)
-        Controller->>Middleware: Prepares Error Response
-        Middleware->>DB: Logs service interaction
-        Middleware->>User: Returns 422 Validation Error
-    else Validation Succeeds
-        Request->>Controller: Returns validated request
-        Controller->>DTO: Converts request to CredentialsDTO
-        DTO->>Controller: Returns DTO
-        Controller->>ServiceInterface: Calls AuthServiceInterface@login with DTO
-        ServiceInterface->>Service: Resolved to AuthService (via DI container)
-        Service->>RepositoryInterface: Calls AuthRepositoryInterface@authenticate with DTO
-        RepositoryInterface->>Repository: Resolved to AuthRepository (via DI container)
-        Repository->>DB: Queries user by email
-        DB->>Repository: Returns user record
-        Repository->>Service: Verifies credentials and returns User
-        Service->>Controller: Returns token result
-        Controller->>Resource: Wraps token result into LoginResource
-        Resource->>Controller: Returns formatted JSON response
-        Controller->>Middleware: Response ready
-        Middleware->>DB: Logs service interaction
-        Middleware->>User: Returns JSON response with access token
-    end
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to CredentialsDTO
+    DTO->>Controller: Returns DTO
+    Controller->>ServiceInterface: Calls login with DTO
+    ServiceInterface->>Service: Resolved to AuthService (via DI container)
+    Service->>RepositoryInterface: Calls authenticate with DTO
+    RepositoryInterface->>Repository: Resolved to AuthRepository (via DI container)
+    Repository->>DB: Queries user by email
+    DB->>Repository: Returns user record
+    Repository->>Service: Verifies credentials and returns User
+    Service->>Controller: Returns token result
+    Controller->>Resource: Wraps token result into LoginResource
+    Resource->>Controller: Returns formatted JSON response
+    Controller->>Middleware: Response ready
+    Middleware->>DB: Logs service interaction
+    Middleware->>User: Returns JSON response with access token
+```
+
+---
+
+#### **1.3 Authenticate via API - Authentication Fails**
+
+**Description:** This diagram demonstrates the workflow when the user provides valid input, but authentication fails due to incorrect credentials (e.g., wrong password).
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant Middleware as LogServiceInteraction
+    participant Controller as AuthController
+    participant Request as LoginRequest
+    participant DTO as CredentialsDTO
+    participant ServiceInterface as AuthServiceInterface
+    participant Service as AuthService
+    participant RepositoryInterface as AuthRepositoryInterface
+    participant Repository as AuthRepository
+    participant DB as Database
+
+    User->>API: POST /api/auth/login
+    API->>Middleware: Passes request
+    Middleware->>Controller: Calls AuthController@login
+    Controller->>Request: Validates LoginRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to CredentialsDTO
+    DTO->>Controller: Returns DTO
+    Controller->>ServiceInterface: Calls login with DTO
+    ServiceInterface->>Service: Resolved to AuthService (via DI container)
+    Service->>RepositoryInterface: Calls authenticate with DTO
+    RepositoryInterface->>Repository: Resolved to AuthRepository (via DI container)
+    Repository->>DB: Queries user by email
+    DB->>Repository: Returns user record
+    Repository-->>Service: Returns null (user not found or password mismatch)
+    Service-->>Controller: Throws AuthenticationException (401)
+    Controller->>Middleware: Prepares Error Response
+    Middleware->>DB: Logs service interaction
+    Middleware->>User: Returns 401 Unauthorized Error
+```
+
+---
+
+#### **1.4 Authenticate via API - Internal Server Error**
+
+**Description:** This diagram illustrates the workflow when an unexpected error occurs during the authentication process (e.g., database connection failure).
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant Middleware as LogServiceInteraction
+    participant Controller as AuthController
+    participant Request as LoginRequest
+    participant DTO as CredentialsDTO
+    participant ServiceInterface as AuthServiceInterface
+    participant Service as AuthService
+    participant RepositoryInterface as AuthRepositoryInterface
+    participant Repository as AuthRepository
+    participant DB as Database
+
+    User->>API: POST /api/auth/login
+    API->>Middleware: Passes request
+    Middleware->>Controller: Calls AuthController@login
+    Controller->>Request: Validates LoginRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to CredentialsDTO
+    DTO->>Controller: Returns DTO
+    Controller->>ServiceInterface: Calls login with DTO
+    ServiceInterface->>Service: Resolved to AuthService (via DI container)
+    Service->>RepositoryInterface: Calls authenticate with DTO
+    RepositoryInterface->>Repository: Resolved to AuthRepository (via DI container)
+    Repository->>DB: Queries user by email
+    DB-->>Repository: Throws DatabaseException
+    Repository-->>Service: Passes exception
+    Service-->>Controller: Passes exception
+    Controller->>Middleware: Prepares Error Response
+    Middleware->>DB: Logs service interaction
+    Middleware->>User: Returns 500 Internal Server Error
 ```
 
 #### **2. Search for GIFs**
 
-This diagram demonstrates the workflow for querying GIFs from the Giphy API:
+These diagrams demonstrates the workflow for querying GIFs from the Giphy API:
+
+#### **2.1 Search for GIFs - User Not Authenticated**
+
+**Description:** This diagram illustrates the workflow when the user is not authenticated while trying to search for GIFs.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+
+    User->>API: GET /api/v1/gifs?q=&limit=&offset=
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>User: Returns 401 Unauthenticated Error
+```
+
+---
+
+#### **2.2 Search for GIFs - Validation Fails**
+
+**Description:** This diagram shows the workflow when the request validation fails due to invalid query parameters.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@index
+    participant Request as GifFilterRequest
+    participant DB as Database
+
+    User->>API: GET /api/v1/gifs?q=&limit=&offset=
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@index
+    Controller->>Request: Validates GifFilterRequest
+    Request-->>Controller: ValidationException (422)
+    Controller->>LogMiddleware: Prepares error response
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Error
+    AuthMiddleware->>User: Returns 422 Validation Error
+```
+
+---
+
+#### **2.3 Search for GIFs - Cache Hit**
+
+**Description:** This diagram demonstrates the successful retrieval of GIFs from the Redis cache when the user is authenticated, and the data is already cached.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@index
+    participant Request as GifFilterRequest
+    participant DTO as GifFilterDTO
+    participant ServiceInterface as GifServiceInterface
+    participant Service as GifService
+    participant ClientInterface as GifClientInterface
+    participant Client as GiphyClient
+    participant Redis as Redis Cache
+    participant GifListDTO
+    participant Resource as GifListResource
+    participant DB as Database
+
+    User->>API: GET /api/v1/gifs?q=&limit=&offset=
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@index
+    Controller->>Request: Validates GifFilterRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to GifFilterDTO
+    DTO->>Controller: Returns DTO
+    Controller->>ServiceInterface: Calls filterGifs with DTO
+    ServiceInterface->>Service: Resolved to GifService (via DI)
+    Service->>ClientInterface: Calls filterGifs with DTO
+    ClientInterface->>Client: Resolved to GiphyClient (via DI)
+    Client->>Redis: Checks Redis cache for key
+    Redis->>Client: Returns cached GifListDTO
+    Client->>Service: Returns cached GifListDTO
+    Service->>Controller: Returns GifListDTO
+    Controller->>Resource: Formats response with ApiResponse
+    Resource->>Controller: Returns formatted JSON response
+    Controller->>LogMiddleware: Response ready
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Response
+    AuthMiddleware->>User: Returns JSON response with GIF list data and pagination
+```
+
+---
+
+#### **2.4 Search for GIFs - Cache Miss and Giphy API Error**
+
+**Description:** This diagram illustrates the workflow when the user is authenticated, the data is not in the cache, and the Giphy API returns an error.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@index
+    participant Request as GifFilterRequest
+    participant DTO as GifFilterDTO
+    participant ServiceInterface as GifServiceInterface
+    participant Service as GifService
+    participant ClientInterface as GifClientInterface
+    participant Client as GiphyClient
+    participant Redis as Redis Cache
+    participant Giphy as Giphy API
+    participant DB as Database
+
+    User->>API: GET /api/v1/gifs?q=&limit=&offset=
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@index
+    Controller->>Request: Validates GifFilterRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to GifFilterDTO
+    DTO->>Controller: Returns DTO
+    Controller->>ServiceInterface: Calls filterGifs with DTO
+    ServiceInterface->>Service: Resolved to GifService (via DI)
+    Service->>ClientInterface: Calls filterGifs with DTO
+    ClientInterface->>Client: Resolved to GiphyClient (via DI)
+    Client->>Redis: Checks Redis cache for key
+    Redis-->>Client: Cache Miss
+    Client->>Giphy: Queries Giphy API with filters
+    Giphy-->>Client: Returns error response (e.g., 401, 403, 422, 500)
+    Client-->>Service: Throws GiphyClientException
+    Service-->>Controller: Passes exception
+    Controller->>LogMiddleware: Prepares error response
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Error
+    AuthMiddleware->>User: Returns JSON error response with appropriate code
+```
+
+---
+
+#### **2.5 Search for GIFs - Cache Miss and Giphy API Success**
+
+**Description:** This diagram shows the workflow when the user is authenticated, the data is not in the cache, and the Giphy API successfully returns the GIFs.
 
 ```mermaid
 sequenceDiagram
@@ -210,64 +456,105 @@ sequenceDiagram
     participant Resource as GifListResource
     participant DB as Database
 
-    User->>API: GET /api/v1/gifs?q=<query>&limit=<limit>&offset=<offset>
+    User->>API: GET /api/v1/gifs?q=&limit=&offset=
     API->>AuthMiddleware: Validates token
-    alt User Not Authenticated
-        AuthMiddleware->>User: Returns 401 Unauthenticated Error
-    else
-        AuthMiddleware->>LogMiddleware: Passes validated request
-        LogMiddleware->>Controller: Calls GifController@index
-        Controller->>Request: Validates GifFilterRequest
-        alt Validation Fails
-            Request-->>Controller: ValidationException (422)
-            Controller->>LogMiddleware: Prepares error response
-            LogMiddleware->>DB: Logs service interaction
-            LogMiddleware->>User: Returns 422 Validation Error
-        else Validation Succeeds
-            Request->>Controller: Returns validated request
-            Controller->>DTO: Converts request to GifFilterDTO
-            DTO->>Controller: Returns DTO
-            Controller->>ServiceInterface: Calls GifServiceInterface@filterGifs with DTO
-            ServiceInterface->>Service: Resolved to GifService (via DI container)
-            Service->>ClientInterface: Calls GifClientInterface@filterGifs with DTO
-            ClientInterface->>Client: Resolved to GiphyClient (via DI container)
-            Client->>Redis: Checks Redis cache for key
-            alt Cache Hit
-                Redis->>Client: Returns cached GIF list
-            else Cache Miss
-                Client->>Giphy: Queries Giphy API with filters
-                alt API Error Occurs
-                    Giphy-->>Client: Returns error response (401, 403, 422, 500, etc)
-                    Client-->>Service: Throws GiphyClientException
-                    Service-->>Controller: Passes exception
-                    Controller->>LogMiddleware: Prepares error response
-                    LogMiddleware->>DB: Logs service interaction
-                    LogMiddleware->>User: Returns JSON error response with appropriate code
-                else
-                    Giphy->>Client: Returns raw GIF data
-                    Client->>Redis: Stores GIF data in cache
-                end
-            end
-            Client->>GifListDTO: Constructs GifListDTO
-            GifListDTO->>GifClientDTO: Maps each GIF to GifClientDTO
-            GifListDTO->>PaginationDTO: Builds PaginationDTO for pagination details
-            GifClientDTO->>GifListDTO: Returns processed GIF DTOs
-            PaginationDTO->>GifListDTO: Returns pagination DTO
-            GifListDTO->>Client: Returns structured DTO list
-            Client->>Service: Returns structured DTO list
-            Service->>Controller: Returns GifListDTO
-            Controller->>Resource: Formats response with ApiResponse
-            Resource->>Controller: Returns formatted JSON response
-            Controller->>LogMiddleware: Response ready
-            LogMiddleware->>DB: Logs service interaction
-            LogMiddleware->>User: Returns JSON response with GIF list data and pagination
-        end
-    end
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@index
+    Controller->>Request: Validates GifFilterRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to GifFilterDTO
+    DTO->>Controller: Returns DTO
+    Controller->>ServiceInterface: Calls filterGifs with DTO
+    ServiceInterface->>Service: Resolved to GifService (via DI)
+    Service->>ClientInterface: Calls filterGifs with DTO
+    ClientInterface->>Client: Resolved to GiphyClient (via DI)
+    Client->>Redis: Checks Redis cache for key
+    Redis-->>Client: Cache Miss
+    Client->>Giphy: Queries Giphy API with filters
+    Giphy->>Client: Returns raw GIF data
+    Client->>Redis: Stores GIF data in cache
+    Client->>GifListDTO: Constructs GifListDTO
+    GifListDTO->>GifClientDTO: Maps each GIF to GifClientDTO
+    GifListDTO->>PaginationDTO: Builds PaginationDTO for pagination details
+    GifClientDTO->>GifListDTO: Returns processed GIF DTOs
+    PaginationDTO->>GifListDTO: Returns pagination DTO
+    GifListDTO->>Client: Returns structured DTO list
+    Client->>Service: Returns structured DTO list
+    Service->>Controller: Returns GifListDTO
+    Controller->>Resource: Formats response with ApiResponse
+    Resource->>Controller: Returns formatted JSON response
+    Controller->>LogMiddleware: Response ready
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Response
+    AuthMiddleware->>User: Returns JSON response with GIF list data and pagination
 ```
 
 #### **3. Search GIF By ID**
 
-This diagram demonstrates the workflow for get an specific GIF from the Giphy API:
+These diagrams demonstrates the workflow for get an specific GIF from the Giphy API:
+
+#### **3.1 Search GIF By ID - User Not Authenticated**
+
+**Description:** This diagram illustrates the workflow when the user is not authenticated while trying to retrieve a GIF by ID.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+
+    User->>API: GET /api/v1/gifs/{id}
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>User: Returns 401 Unauthenticated Error
+```
+
+---
+
+#### **3.2 Search GIF By ID - Cache Hit**
+
+**Description:** This diagram demonstrates the successful retrieval of a GIF from the Redis cache when the user is authenticated, and the GIF data is already cached.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@show
+    participant ServiceInterface as GifServiceInterface
+    participant Service as GifService
+    participant ClientInterface as GifClientInterface
+    participant Client as GiphyClient
+    participant Redis as Redis Cache
+    participant GifClientDTO
+    participant Resource as GifResource
+    participant DB as Database
+
+    User->>API: GET /api/v1/gifs/{id}
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@show
+    Controller->>ServiceInterface: Calls getGifById with ID
+    ServiceInterface->>Service: Resolved to GifService (via DI)
+    Service->>ClientInterface: Calls getGifById with ID
+    ClientInterface->>Client: Resolved to GiphyClient (via DI)
+    Client->>Redis: Checks Redis cache for key
+    Redis->>Client: Returns cached GifClientDTO
+    Client->>Service: Returns GifClientDTO
+    Service->>Controller: Returns GifClientDTO
+    Controller->>Resource: Formats response with ApiResponse
+    Resource->>Controller: Returns formatted JSON response
+    Controller->>LogMiddleware: Response ready
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Response
+    AuthMiddleware->>User: Returns JSON response with GIF data
+```
+
+---
+
+#### **3.3 Search GIF By ID - Cache Miss and Giphy API Success**
+
+**Description:** This diagram shows the workflow when the user is authenticated, the GIF data is not in the cache, and the Giphy API successfully returns the GIF data.
 
 ```mermaid
 sequenceDiagram
@@ -288,49 +575,34 @@ sequenceDiagram
 
     User->>API: GET /api/v1/gifs/{id}
     API->>AuthMiddleware: Validates token
-    alt User Not Authenticated
-        AuthMiddleware->>User: Returns 401 Unauthenticated Error
-    else
-        AuthMiddleware->>LogMiddleware: Passes validated request
-        LogMiddleware->>Controller: Calls GifController@show
-        Controller->>ServiceInterface: Calls GifServiceInterface@getGifById with ID
-        ServiceInterface->>Service: Resolved to GifService (via DI container)
-        Service->>ClientInterface: Calls GifClientInterface@getGifById with ID
-        ClientInterface->>Client: Resolved to GiphyClient (via DI container)
-        Client->>Redis: Checks Redis cache for key
-        alt Cache Hit
-            Redis->>Client: Returns cached GIF data
-        else Cache Miss
-            Client->>Giphy: Queries Giphy API with ID
-            alt API Error Occurs
-                    Giphy-->>Client: Returns error response (401, 403, 422, 500, etc)
-                    Client-->>Service: Throws GiphyClientException
-                    Service-->>Controller: Passes exception
-                    Controller->>LogMiddleware: Prepares error response
-                    LogMiddleware->>DB: Logs service interaction
-                    LogMiddleware->>AuthMiddleware: Passes Error
-                    AuthMiddleware->>User: Returns JSON error response with appropriate code
-            else
-                Giphy->>Client: Returns GIF data
-                Client->>Redis: Stores GIF data in cache
-            end
-        end
-        Client->>GifClientDTO: Constructs GifClientDTO
-        GifClientDTO->>Client: Returns GifClientDTO
-        Client->>Service: Returns GifClientDTO
-        Service->>Controller: Returns GifClientDTO
-        Controller->>Resource: Formats response with ApiResponse
-        Resource->>Controller: Returns formatted JSON response
-        Controller->>LogMiddleware: Response ready
-        LogMiddleware->>DB: Logs service interaction
-        LogMiddleware->>AuthMiddleware: Passes Response
-        LogMiddleware->>User: Returns JSON response with GIF data
-    end
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@show
+    Controller->>ServiceInterface: Calls getGifById with ID
+    ServiceInterface->>Service: Resolved to GifService (via DI)
+    Service->>ClientInterface: Calls getGifById with ID
+    ClientInterface->>Client: Resolved to GiphyClient (via DI)
+    Client->>Redis: Checks Redis cache for key
+    Redis-->>Client: Cache Miss
+    Client->>Giphy: Queries Giphy API with ID
+    Giphy->>Client: Returns GIF data
+    Client->>Redis: Stores GIF data in cache
+    Client->>GifClientDTO: Constructs GifClientDTO
+    GifClientDTO->>Client: Returns GifClientDTO
+    Client->>Service: Returns GifClientDTO
+    Service->>Controller: Returns GifClientDTO
+    Controller->>Resource: Formats response with ApiResponse
+    Resource->>Controller: Returns formatted JSON response
+    Controller->>LogMiddleware: Response ready
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Response
+    AuthMiddleware->>User: Returns JSON response with GIF data
 ```
 
-#### **4. Save Favorite GIF**
+---
 
-This diagram demonstrates the workflow for saving favorite gif:
+#### **3.4 Search GIF By ID - Cache Miss and Giphy API Error**
+
+**Description:** This diagram illustrates the workflow when the user is authenticated, the GIF data is not in the cache, and the Giphy API returns an error.
 
 ```mermaid
 sequenceDiagram
@@ -339,9 +611,52 @@ sequenceDiagram
     participant AuthMiddleware as Auth:api Middleware
     participant LogMiddleware as LogServiceInteraction
     participant Controller as GifController@show
-    participant Policy as FavoriteGifPolicy@save
+    participant ServiceInterface as GifServiceInterface
+    participant Service as GifService
+    participant ClientInterface as GifClientInterface
+    participant Client as GiphyClient
+    participant Redis as Redis Cache
+    participant Giphy as Giphy API
+    participant DB as Database
+
+    User->>API: GET /api/v1/gifs/{id}
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@show
+    Controller->>ServiceInterface: Calls getGifById with ID
+    ServiceInterface->>Service: Resolved to GifService (via DI)
+    Service->>ClientInterface: Calls getGifById with ID
+    ClientInterface->>Client: Resolved to GiphyClient (via DI)
+    Client->>Redis: Checks Redis cache for key
+    Redis-->>Client: Cache Miss
+    Client->>Giphy: Queries Giphy API with ID
+    Giphy-->>Client: Returns error response (e.g., 401, 403, 422, 500)
+    Client-->>Service: Throws GiphyClientException
+    Service-->>Controller: Passes exception
+    Controller->>LogMiddleware: Prepares error response
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Error
+    AuthMiddleware->>User: Returns JSON error response with appropriate code
+```
+
+#### **4. Save Favorite GIF**
+
+These diagrams demonstrates the workflow for saving favorite gif:
+
+#### **4.1 Save Favorite GIF - Successful Case**
+
+**Description:** This diagram demonstrates the successful workflow when a user saves a favorite GIF successfully.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@store
     participant Request as SaveFavoriteGifRequest
     participant DTO as FavoriteGifDTO
+    participant Policy as FavoriteGifPolicy@save
     participant ServiceInterface as GifServiceInterface
     participant Service as GifService
     participant RepositoryInterface as GifRepositoryInterface
@@ -350,62 +665,195 @@ sequenceDiagram
 
     User->>API: POST /api/v1/gifs
     API->>AuthMiddleware: Validates token
-    alt User Not Authenticated
-        AuthMiddleware->>User: Returns 401 Unauthenticated Error
-    else
-        AuthMiddleware->>LogMiddleware: Passes validated request
-        LogMiddleware->>Controller: Calls GifController@store
-        Controller->>Request: Validates SaveFavoriteGifRequest
-        alt Validation Fails
-            Request-->>Controller: ValidationException (422)
-            Controller->>LogMiddleware: Prepares error response
-            LogMiddleware->>DB: Logs service interaction
-            LogMiddleware->>AuthMiddleware: Passes Error
-            AuthMiddleware->>User: Returns 422 Validation Error
-        else
-            Request->>Controller: Returns validated request
-            Controller->>DTO: Converts request to FavoriteGifDTO
-            DTO->>Controller: Returns DTO
-            Request->>Policy: Validates User Authorization
-            alt Validation Fails
-                Policy->Controller: AuthorizationException (403)
-                Controller->>LogMiddleware: Prepares error response
-                LogMiddleware->>DB: Logs service interaction
-                LogMiddleware->>AuthMiddleware: Passes Error
-                AuthMiddleware->>User: Returns 422 Validation Error
-            else
-                Policy->Controller: User Authorizated
-                Controller->>ServiceInterface: Calls GifServiceInterface@saveFavoriteGif with DTO
-                ServiceInterface->>Service: Resolved to GifService (via DI container)
-                Service->>RepositoryInterface: Calls GifRepositoryInterface@saveFavoriteGif with DTO
-                RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
-                Repository->>DB: Save favorite GIF in DB
-                alt DB Error Occurs
-                    DB->>Repository: Throws QueryException
-                    alt Exception code 23000
-                        Repository-->>Service: Throws DuplicateFavoriteGifException
-                        Service-->>Controller: Passes Exception
-                        Controller->>LogMiddleware: Prepares error response
-                        LogMiddleware->>DB: Logs service interaction
-                        LogMiddleware->>AuthMiddleware: Passes Error
-                        AuthMiddleware->>User: Returns 409 Validation Error
-                    else
-                        Repository-->>Service: Passes Exception
-                        Service-->>Controller: Passes Exception
-                        Controller->>LogMiddleware: Prepares error response
-                        LogMiddleware->>DB: Logs service interaction
-                        LogMiddleware->>AuthMiddleware: Passes Error
-                        AuthMiddleware->>User: Returns 500 Validation Error
-                    end
-                else
-                    Controller->>LogMiddleware: Response ready
-                    LogMiddleware->>DB: Logs service interaction
-                    LogMiddleware->>AuthMiddleware: Passes Response
-                    AuthMiddleware->>User: Returns 201
-                end
-            end
-        end
-    end
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@store
+    Controller->>Request: Validates SaveFavoriteGifRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to FavoriteGifDTO
+    DTO->>Controller: Returns DTO
+    Controller->>Policy: Validates User Authorization
+    Policy->>Controller: User Authorized
+    Controller->>ServiceInterface: Calls saveFavoriteGif with DTO
+    ServiceInterface->>Service: Resolved to GifService (via DI container)
+    Service->>RepositoryInterface: Calls saveFavoriteGif with DTO
+    RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
+    Repository->>DB: Save favorite GIF in DB
+    DB->>Repository: Favorite GIF Saved
+    Repository->>Service: Returns success
+    Service->>Controller: Returns success
+    Controller->>LogMiddleware: Response ready
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Response
+    AuthMiddleware->>User: Returns 201 Created
+```
+
+---
+
+#### **4.2 Save Favorite GIF - User Not Authenticated**
+
+**Description:** This diagram shows the workflow when the user is not authenticated.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+
+    User->>API: POST /api/v1/gifs
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>User: Returns 401 Unauthenticated Error
+```
+
+---
+
+#### **4.3 Save Favorite GIF - Validation Fails**
+
+**Description:** This diagram illustrates the workflow when the request validation fails.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@store
+    participant Request as SaveFavoriteGifRequest
+
+    User->>API: POST /api/v1/gifs
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@store
+    Controller->>Request: Validates SaveFavoriteGifRequest
+    Request-->>Controller: ValidationException (422)
+    Controller->>LogMiddleware: Prepares error response
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Error
+    AuthMiddleware->>User: Returns 422 Validation Error
+```
+
+---
+
+#### **4.4 Save Favorite GIF - Authorization Fails**
+
+**Description:** This diagram shows the workflow when user authorization fails.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@store
+    participant Request as SaveFavoriteGifRequest
+    participant DTO as FavoriteGifDTO
+    participant Policy as FavoriteGifPolicy@save
+
+    User->>API: POST /api/v1/gifs
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@store
+    Controller->>Request: Validates SaveFavoriteGifRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to FavoriteGifDTO
+    DTO->>Controller: Returns DTO
+    Controller->>Policy: Validates User Authorization
+    Policy-->>Controller: AuthorizationException (403)
+    Controller->>LogMiddleware: Prepares error response
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Error
+    AuthMiddleware->>User: Returns 403 Authorization Error
+```
+
+---
+
+#### **4.5 Save Favorite GIF - Duplicate Favorite GIF Error**
+
+**Description:** This diagram demonstrates the workflow when the user tries to save a GIF that's already a favorite, resulting in a duplicate error.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@store
+    participant Request as SaveFavoriteGifRequest
+    participant DTO as FavoriteGifDTO
+    participant Policy as FavoriteGifPolicy@save
+    participant ServiceInterface as GifServiceInterface
+    participant Service as GifService
+    participant RepositoryInterface as GifRepositoryInterface
+    participant Repository as GifRepository
+    participant DB as Database
+
+    User->>API: POST /api/v1/gifs
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@store
+    Controller->>Request: Validates SaveFavoriteGifRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to FavoriteGifDTO
+    DTO->>Controller: Returns DTO
+    Controller->>Policy: Validates User Authorization
+    Policy->>Controller: User Authorized
+    Controller->>ServiceInterface: Calls saveFavoriteGif with DTO
+    ServiceInterface->>Service: Resolved to GifService (via DI container)
+    Service->>RepositoryInterface: Calls saveFavoriteGif with DTO
+    RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
+    Repository->>DB: Save favorite GIF in DB
+    DB-->>Repository: Throws QueryException (Code 23000)
+    Repository-->>Service: Throws DuplicateFavoriteGifException
+    Service-->>Controller: Passes Exception
+    Controller->>LogMiddleware: Prepares error response
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Error
+    AuthMiddleware->>User: Returns 409 Conflict Error
+```
+
+---
+
+#### **4.6 Save Favorite GIF - General Database Error**
+
+**Description:** This diagram illustrates the workflow when a general database error occurs during the save operation.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Laravel API
+    participant AuthMiddleware as Auth:api Middleware
+    participant LogMiddleware as LogServiceInteraction
+    participant Controller as GifController@store
+    participant Request as SaveFavoriteGifRequest
+    participant DTO as FavoriteGifDTO
+    participant Policy as FavoriteGifPolicy@save
+    participant ServiceInterface as GifServiceInterface
+    participant Service as GifService
+    participant RepositoryInterface as GifRepositoryInterface
+    participant Repository as GifRepository
+    participant DB as Database
+
+    User->>API: POST /api/v1/gifs
+    API->>AuthMiddleware: Validates token
+    AuthMiddleware->>LogMiddleware: Passes validated request
+    LogMiddleware->>Controller: Calls GifController@store
+    Controller->>Request: Validates SaveFavoriteGifRequest
+    Request->>Controller: Returns validated request
+    Controller->>DTO: Converts request to FavoriteGifDTO
+    DTO->>Controller: Returns DTO
+    Controller->>Policy: Validates User Authorization
+    Policy->>Controller: User Authorized
+    Controller->>ServiceInterface: Calls saveFavoriteGif with DTO
+    ServiceInterface->>Service: Resolved to GifService (via DI container)
+    Service->>RepositoryInterface: Calls saveFavoriteGif with DTO
+    RepositoryInterface->>Repository: Resolved to GifRepository (via DI container)
+    Repository->>DB: Save favorite GIF in DB
+    DB-->>Repository: Throws QueryException (Other Exception)
+    Repository-->>Service: Passes Exception
+    Service-->>Controller: Passes Exception
+    Controller->>LogMiddleware: Prepares error response
+    LogMiddleware->>DB: Logs service interaction
+    LogMiddleware->>AuthMiddleware: Passes Error
+    AuthMiddleware->>User: Returns 500 Internal Server Error
 ```
 
 ---
