@@ -74,6 +74,7 @@ This command will:
 - Install Laravel dependencies.
 - Generate the application key and Passport keys.
 - Run database migrations and seed sample data.
+- Run Tests.
 
 ### Step 4: Start the Server
 
